@@ -1,5 +1,8 @@
 #This code generates an example data set following the same process for Scenario 1
 #when there are 50 continuous outcome variables and only 1 underlying factor
+library(BoomSpikeSlab)
+library(pROC)
+source("R/gen_gene_by_snp.R")
 
 #generate 100 genes, 10 cis-SNPs per gene, 10 genes per region
 
@@ -29,4 +32,7 @@ for(j in 1:10) {
 
 #get all pips
 
-gene_pips <- lapply(fit_list, FUN = function(x) twas_pip(x, max(x$kstar)))
+gene_pips <- unlist(lapply(fit_list, FUN = function(x) twas_pip(x, max(x$kstar))))
+
+#calculate, for example, the AUC
+auc(roc(dat$A, gene_pips))
