@@ -1,6 +1,6 @@
-bfdr <- function(pips, cutoff) {
+bfdr <- function(pips, ctrl) {
     yy <- cumsum(sort(1-pips))/(1:length(pips))
-    mm <- yy < cutoff
+    mm <- yy < ctrl
     idx <- sum(mm)
     if (idx > 0) {
         out <- 1 - sort(1-pips)[idx]
