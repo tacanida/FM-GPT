@@ -9,6 +9,11 @@ License: What license is it under?
 Encoding: UTF-8
 LazyData: true
 Imports: Rcpp (>= 1.0.13),
-    RcppEigen
+    RcppEigen,
+    pg,
+    MASS,
+    truncnorm,
+    mvnfast,
+    LaplacesDemon
 LinkingTo: Rcpp,
     RcppEigen
