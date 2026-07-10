@@ -32,7 +32,31 @@ for(j in 1:10) {
 
 #get all pips
 
-gene_pips <- unlist(lapply(fit_list, FUN = function(x) twas_pip(x, max(x$kstar))))
+pips <- unlist(lapply(fit_list, FUN = function(x) twas_pip(x, max(x$kstar))))
 
 #calculate, for example, the AUC
-auc(roc(dat$A, gene_pips))
+auc(roc(dat$A, pips))
+
+                    
+#calculate power, fdr
+if(all(pips == 0)) {
+    fdr <- 0
+    power <- 0
+    true_detect[i] <- 0
+    false_detect[i] <- 0
+  } else {
+    cutoff <- bfdr(pips, 0.1)
+    signal <- pips >= cutoff
+    A <- dat$A
+    false_discovery <- sum(A == 0 & signal == 1)
+    discoveries <- sum(signal)
+    if(discoveries == 0) {
+      fdr <- 0
+    } else {
+      fdr <- false_discovery / discoveries
+    }
+    
+    false_negative <- sum(A == 1 & signal == 0)
+    negatives <- sum(1 - signal)
+    power <- sum(signal*A) / sum(A)
+}
