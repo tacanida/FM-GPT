@@ -3,7 +3,7 @@ Type: Package
 Title: FM-GPT
 Version: 0.1.0
 Author: Travis Canida
-Maintainer: tacanida@umd.edu
+Maintainer: Travis Canida <tacanida@umd.edu>
 Description: Provides R functions to implement the FM-GPT Method
 License: What license is it under?
 Encoding: UTF-8
