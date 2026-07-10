@@ -3,7 +3,7 @@ bfdr <- function(pips, cutoff) {
     mm <- yy < cutoff
     idx <- sum(mm)
     if (idx > 0) {
-        out <- 1 - sort(pips)[index]
+        out <- 1 - sort(1-pips)[idx]
     }
     if (idx == 0) {
         out <- 1
