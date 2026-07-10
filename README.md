@@ -11,3 +11,6 @@ FM-GPT can be installed by:
 ```
 devtools::install_github("tacanida/fm-gpt")
 ```
+
+## Usage
+The primary function in the package is the `FMGPT` function. Specifically, it requires the user provides a matrix `X` of GReX data, a matrix `Y` of observed phenotypes, and a response vector indicating the data type of the outcome phenotypes. More detailed usage can be found in the [tutorial](example/FM-GPT_Tutorial.pdf).
