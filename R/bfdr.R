@@ -1,14 +1,13 @@
-bfdr <- function(pips, ctrl) {
-    yy <- cumsum(sort(1-pips))/(1:length(pips))
-    mm <- yy < ctrl
-    idx <- sum(mm)
-    if (idx > 0) {
-        out <- 1 - sort(1-pips)[idx]
-    }
-    if (idx == 0) {
-        out <- 1
-        warning("no valid cutoff found")
-    }
-    names(out) <- NULL
-    return(out)
+bfdr <- function(pips, alpha = 0.1) {
+    
+    phat <- sort(1 - pips)
+    
+    bfdr <- cumsum(phat) / seq_along(phat)
+    
+    k <- max(c(0, which(bfdr <= alpha)))
+    
+    if(k == 0)
+        return(1)
+    
+    1 - phat[k]
 }
