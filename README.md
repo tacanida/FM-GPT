@@ -13,4 +13,4 @@ devtools::install_github("tacanida/fm-gpt")
 ```
 
 ## Usage
-The primary function in the package is the `FMGPT` function. Specifically, it requires the user provides a matrix `X` of GReX data, a matrix `Y` of observed phenotypes, and a response vector indicating the data type of the outcome phenotypes. More detailed usage can be found in the [tutorial](example/FM_GPT_Tutorial.pdf) (note you may need to download the pdf to view, some browsers have issue displaying within GitHub).
+The primary function in the package is the `FMGPT` function. Specifically, it requires the user provides a matrix `X` of GReX data, a matrix `Y` of observed phenotypes, and a response vector indicating the data type of the outcome phenotypes. More detailed usage can be found in the [tutorial](example/FM_GPT_Tutorial.pdf) (note: you may need to download the pdf to view, some browsers have issues displaying within GitHub).
