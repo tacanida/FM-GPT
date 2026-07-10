@@ -1,12 +1,4 @@
 
-library(Rcpp)
-library(truncnorm)
-library(MASS)
-library(pg)
-library(mvnfast)
-library(LaplacesDemon)
-
-
 update_Omega5 <- function(eta, Lambda, U, n, Q, response_types, Y, r) {
   omat <- matrix(NA, n, Q)
   theta <- eta %*% Lambda + U
@@ -35,67 +27,6 @@ update_Z <- function(Omega, response_types, Y, r, n, Q) {
   }
   return(zmat)
 }
-
-
-cppFunction(depends = "RcppArmadillo", 'arma::mat update_U_cpp(arma::mat Z, arma::mat Omega, arma::mat Sigma,
-            arma::mat eta, arma::mat Lambda, int n, int Q) {
-            arma::mat umat(n,Q);
-            arma::mat Sigma_inv = inv(Sigma);
-
-            for(int i = 0; i < n; ++i) {
-              arma::vec Omegai = Omega.row(i).t();
-              arma::mat psi_i = diagmat(Omegai) + Sigma_inv;
-              arma::mat V = inv(psi_i);
-              arma::vec M = V * (Omegai % (Z.row(i).t() - Lambda.t() * eta.row(i).t()));
-              umat.row(i) = arma::mvnrnd(M,V).t();
-            }
-            return umat;
-            }')
-
-
-cppFunction(depends = "RcppArmadillo", 'arma::mat update_R_cpp(arma::vec response_types, arma::mat Y, arma::mat eta,
-            arma::mat Lambda, arma::mat U, int Q, int n, arma::vec r) {
-            for(int q = 0; q < Q; ++q) {
-              if(response_types(q) == 3) {
-                arma::vec thetaq = eta * Lambda.col(q) + U.col(q);
-                arma::vec expthetaq = exp(thetaq);
-                arma::vec pp = expthetaq / (1 + expthetaq);
-                pp.transform([](double val) { return std::min(val, 0.9999); });
-                arma::vec l(n, arma::fill::zeros);
-                arma::vec Yq = Y.col(q);
-                for(int i = 0; i < n; ++i) {
-                  int Yiq = Yq(i);
-                  arma::vec pq = r(q) / (r(q) + (arma::linspace(1, Yiq, Yiq)) - 1);
-                  arma::vec l1(Yiq, arma::fill::zeros);
-                  for(int inner_ind = 0; inner_ind < Yiq; ++inner_ind) {
-                    l1(inner_ind) = R::rbinom(1, Rf_fround(pq(inner_ind), 6));
-                  }
-                  l(i) = sum(l1);
-                }
-                r(q) = R::rgamma(10 + sum(l), 1/(1 - sum(log(1-pp))));
-              }
-            }
-            return r;
-            }')
-
-
-cppFunction(depends = "RcppEigen", 'Eigen::MatrixXd update_eta_cpp2(Eigen::MatrixXd Omega,
-            Eigen::MatrixXd Lambda, Eigen::MatrixXd Z, int p, Eigen::MatrixXd U, Eigen::MatrixXd Sigma, Eigen::MatrixXd B,
-            int n, Eigen::MatrixXd X, Eigen::MatrixXd rand_mat) {
-              Eigen::MatrixXd emat(n,p);
-              Eigen::MatrixXd SSigma = Sigma.inverse();
-              for(int i = 0; i < n; ++i) {
-                Eigen::MatrixXd Omegai = Omega.row(i).asDiagonal();
-                Eigen::MatrixXd V = (Lambda * Omegai * Lambda.transpose() + SSigma).inverse();
-                Eigen::MatrixXd M = V * (Lambda * Omegai * (Z.row(i) - U.row(i)).transpose() + SSigma * B.transpose()  * X.row(i).transpose());
-                Eigen::VectorXd mean = M.col(0);
-                Eigen::MatrixXd covar = V;
-                Eigen::MatrixXd sample = rand_mat.row(i);
-                Eigen::MatrixXd eta_sample = mean + covar.llt().matrixL() * sample.transpose();
-                emat.row(i) = eta_sample.transpose();
-              }
-            return emat;
-            }')
 
 
 update_a1 <- function(a1_cur,delta1){
@@ -188,91 +119,6 @@ taulh <- function(delta, l, h) {
   return(tau)
 }
 
-
-sourceCpp("src/mat_funs.cpp")
-
-cppFunction(depends = "RcppEigen", 'Eigen::VectorXd gamma_updateC2(Eigen::MatrixXd X, Eigen::MatrixXd Y,
-            Eigen::MatrixXd b, IntegerVector group, NumericVector pi1, Eigen::MatrixXd amat,
-            Eigen::MatrixXd gmat, Eigen::MatrixXd omat, const Eigen::Map<Eigen::MatrixXd> Sigma,
-            int ncolY, int ncolX) {
-  Eigen::VectorXd gamma(ncolX);
-  for (int xcol = 0; xcol < ncolX; ++xcol) {
-    Eigen::MatrixXd gmats = Eigen::MatrixXd::Zero(ncolX, ncolY);
-    // gmats(xcol, Eigen::all) = 1;
-    gmats.row(xcol).setConstant(1);
-
-    Eigen::MatrixXd gmatns = gmat;
-    // gmatns(xcol, Eigen::all) = 0;
-    gmatns.row(xcol).setConstant(0);
-
-    Eigen::MatrixXd Zs = amat.array() * gmats.array() * omat.array();
-    Eigen::MatrixXd Zns = amat.array() * gmatns.array() * omat.array();
-    Eigen::MatrixXd ZnsB = Zns.array() * b.array();
-    Eigen::MatrixXd Yns = Y - X * ZnsB;
-
-    Eigen::MatrixXd Bs = Zs.array() * b.array();
-    Eigen::MatrixXd XB = X * Bs;
-
-    Eigen::MatrixXd mat1 = ((Yns - XB) * Sigma).array() * (Yns - XB).array();
-    Eigen::MatrixXd mat2 = (Yns * Sigma).array() * Yns.array();
-
-    double sum1 = mat1.sum();
-    double sum2 = mat2.sum();
-    double calc1 = -0.5 * sum1;
-    double calc2 = -0.5 * sum2;
-
-    double prob = pi1[xcol] / (pi1[xcol] + (1 - pi1[xcol]) * exp(calc2 - calc1));
-    gamma[xcol] = R::rbinom(1, prob);
-
-    gmat.row(xcol).setConstant(gamma[xcol]);
-  }
-  return(gamma);
-}')
-
-
-cppFunction(depends = "RcppEigen", '
-Eigen::VectorXd omega_updateC2(Eigen::MatrixXd X, Eigen::MatrixXd Y,
-                              Eigen::MatrixXd b, IntegerVector group, double pi2,
-                              Eigen::MatrixXd amat, Eigen::MatrixXd gmat,
-                              Eigen::MatrixXd omat, const Eigen::Map<Eigen::MatrixXd> Sigma,
-                              int ncolY, int ncolX) {
-  Eigen::VectorXd omega(ncolY * ncolX);
-  int tracker = 0;
-
-  for (int ycol = 0; ycol < ncolY; ycol++) {
-    for (int xcol = 0; xcol < ncolX; xcol++) {
-      Eigen::MatrixXd omatt = Eigen::MatrixXd::Zero(ncolX, ncolY);
-      omatt(xcol, ycol) = 1;
-
-      Eigen::MatrixXd omatnt = omat;
-      omatnt(xcol, ycol) = 0;
-
-      Eigen::MatrixXd Zt = amat.array() * gmat.array() * omatt.array();
-      Eigen::MatrixXd Znt = amat.array() * gmat.array() * omatnt.array();
-      Eigen::MatrixXd ZntB = Znt.array() * b.array();
-      Eigen::MatrixXd Ynt = Y - X * ZntB;
-
-      Eigen::MatrixXd Bt = Zt.array() * b.array();
-      Eigen::MatrixXd XB = X * Bt;
-
-      Eigen::MatrixXd mat1 = ((Ynt - XB) * Sigma).array() * (Ynt - XB).array();
-      Eigen::MatrixXd mat2 = ((Ynt) * Sigma).array() * (Ynt).array();
-
-      double sum1 = mat1.sum();
-      double sum2 = mat2.sum();
-      double calc1 = -0.5 * sum1;
-      double calc2 = -0.5 * sum2;
-
-      double prob = pi2 / (pi2 + (1 - pi2) * exp(calc2 - calc1));
-
-      omega[tracker] = R::rbinom(1, prob);
-      omat(xcol, ycol) = omega[tracker];
-      tracker++;
-    }
-  }
-
-  return omega;
-}')
 
 b_update <- function(X, Y, Z, beta, bsigma, Sigma, XtX, XtY) {
   tmp_b <- matrix(nrow = ncol(X), ncol = ncol(Y))
@@ -468,6 +314,8 @@ update_t2 <- function(s2, tcur, t1){
 }
 
 #'
+#' FM-GPT Fine Mapping Function
+#'
 #'@param X Covariate matrix X
 #'@param Y Output matrix Y, possible containing mixed data types
 #'@param A Indicator for eQTL status of a SNP
@@ -484,7 +332,7 @@ update_t2 <- function(s2, tcur, t1){
 #'
 #'@return A list containing the kept iterations for the loading matrix, number of factors,
 #'beta, a1 and a2, sigma2, sigma_beta, count data parameter r, adjustment effect for eQTL SNPs
-#'
+#'@export
 FMGPT <- function(X, Y, A, group, response_types, epsilon, B, burnin, thin = 1, k_fix = NULL, s2.fit = TRUE, Sigma.fit = TRUE, scale.eta = FALSE) {
   X <- scale(X, scale = TRUE)
   Q <- length(response_types)

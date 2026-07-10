@@ -1,6 +1,4 @@
 
-library(MASS)
-
 #'@param n_qtl The sample size of the reference qtl dataset
 #'@param n_gwas The sample size of the GWAS dataset
 #'@param snps_per_gene The total number of cis SNPs for each gene
