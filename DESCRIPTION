@@ -8,12 +8,17 @@ Description: Provides R functions to implement the FM-GPT Method
 License: What license is it under?
 Encoding: UTF-8
 LazyData: true
-Imports: Rcpp (>= 1.0.13),
+Depends: Rcpp (>= 1.0.13),
+    RcppArmadillo,
     RcppEigen,
     pg,
     MASS,
     truncnorm,
     mvnfast,
-    LaplacesDemon
+    LaplacesDemon,
+    mvtnorm,
+    BoomSpikeSlab
 LinkingTo: Rcpp,
+    RcppArmadillo,
     RcppEigen
+RoxygenNote: 7.3.1
